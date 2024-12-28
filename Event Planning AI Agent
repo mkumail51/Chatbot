@@ -1,0 +1,119 @@
+#This ai agent will automatically find the event venue according to the details given 
+#First install dependencies
+!pip install crewai==0.28.8 crewai_tools==0.1.6 langchain_community==0.0.29 langchain_huggingface langchain_openai huggingface_hub
+
+# Warning control
+import warnings
+warnings.filterwarnings('ignore')
+
+from crewai import Agent, Task, Crew
+import os
+import openai
+from transformers import pipeline
+import langchain
+from langchain.embeddings import HuggingFaceEmbeddings
+from crewai_tools import ScrapeWebsiteTool, SerperDevTool
+from pydantic import BaseModel
+
+
+#authenticate openai api key and serper api key
+os.environ["OPENAI_API_KEY"]= "Your api key"
+os.environ["SERPER_API_KEY"] = "Your serper api key"    
+os.enviorn["OPENAI_MODEL_NAME"] = "Your open ai model name"
+
+#Initialize the tools
+search_tool = SerperDevTool()
+scrapeweb = ScrapeWebsiteTool()
+
+#Create Agents
+
+#1 Venue Coordinator Agent
+venue_coordinator = Agent(
+    role = "Venue Coordinator",
+    goal = "Identify and book an appropriate venue based on event requirements",
+    tools=[search_tool, scrape_tool],
+    verbose=True,
+    backstory=(
+        """With a keen sense of space and understanding of event logistics,you excel at finding and securing the perfect venue
+         that fits the event's theme, size, and budget constraints."""
+    )
+)
+
+#2 Logistic Manager Agent
+logistic_manager = Agent(
+    role = "Logistic Manager",
+    goal = "Manager all logistics for the event including catering and equipment",
+    tools=[search_tool, scrape_tool],
+    verbose=True,
+    backstory=(
+        """Organized and detail-oriented,you ensure that every logistical aspect of the event from catering to equipment setup
+        is flawlessly executed to create a seamless experience."""
+    )
+)
+
+#3 Marketing and Communoications Agent
+marketing_communications_agent = Agent(
+    role = "Marketing and Communications Agent",
+    goal = "Effectively market the event and communicate with participants",
+    tools=[search_tool, scrape_tool],
+    verbose=True,
+    backstory=(
+        """Creative and communicative, you craft compelling messages and engage with potential attendees to maximize event exposure and participation."""
+    )
+)
+
+class VenueDetails(BaseModel):
+  name: str
+  address: str
+  capacity: str
+  booking_status : str
+
+#Create tasks
+#1 Logistic Task
+
+logistic_task = Task(
+    description = "Coordinate catering and equipment for an event with {expected_participants} on {tentative_date}",
+    expected_output = "Confirmation of all logistic arrangements including catering and equipment setup.",
+    human_input = True,
+    async_execution = True,
+    agent = logistic_manager
+)
+
+logistic_task = Task(
+    description = "Coordinate catering and equipment for an event with {expected_participants} on {tentative_date}",
+    expected_output = "Confirmation of all logistic arrangements including catering and equipment setup.",
+    human_input = True,
+    async_execution = True,
+    agent = logistic_manager
+)
+
+#2 Marketing Task
+marketing_task = Task(
+    description = "Promot the {event_topic} aiming to engage atleast {expected_participants} potential attendees.",
+    expected_output = "Report on marketing activities and attendee engagement formated as markdown",
+    async_execution = True,
+    output_file = "marketing_report.md",
+    agent = marketing_communications_agent
+)
+
+#Creating the crew
+event_management_crew = Crew(
+    agent = [venue_coordinator, logistic_manager, marketing_communications_agent],
+    tasks = [venue_task, logistic_task, marketing_task],
+    verbose = True
+)
+
+#Runnig the crew
+#I have added an examplary event you can add your own event details
+event_details = {
+    'event_topic': "Tech Innovation Conference",
+    'event_description': """"A gathering of tech innovators and industry leaders to explore future technologies.""",
+    'event_city': "San Francisco",
+    'tentative_date': "2025-02-15",
+    'expected_participants': 500,
+    'budget': 20000,
+    'venue_type': "Conference Hall"
+}
+
+result = event_management_crew.kickoff(inputs=event_details)
+
