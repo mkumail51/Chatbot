@@ -1,2 +1,2 @@
-# Chatbot
-This repo contains different chatbots. I am working on chatbots you will see that code as well
+# Chatbots and Agentic Ai Applications
+This repo contains Chatbots and Agentic Ai Applications using different framworks like Crewai, Phidata etc
